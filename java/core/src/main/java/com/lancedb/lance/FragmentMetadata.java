@@ -17,7 +17,9 @@ import com.lancedb.lance.fragment.DataFile;
 import com.lancedb.lance.fragment.DeletionFile;
 import com.lancedb.lance.fragment.RowIdMeta;
 
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.Serializable;
 import java.util.List;
@@ -89,4 +91,6 @@ public class FragmentMetadata implements Serializable {
         .append("rowIdMeta", rowIdMeta)
         .toString();
   }
+
+  public native Pair<FragmentMetadata, Schema> mergeNative(Dataset dataset, String leftOn, String rightOn, long maxFieldId);
 }

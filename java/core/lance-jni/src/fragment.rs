@@ -222,6 +222,22 @@ fn create_fragment<'a>(
     export_vec(env, &fragments)
 }
 
+#[no_mangle]
+pub extern "system" fn Java_com_lancedb_lance_FragmentMetadat_mergeNative(
+    mut env: JNIEnv,
+    _jfragment: JObject,
+    jdataset: JObject,
+    fragment_id: jlong,
+) -> jint {
+    ok_or_throw_with_return!(
+        env,
+        inner_merge_native(&mut env, jdataset, fragment_id),
+        -1
+    ) as jint
+}
+
+pub fn inner_merge_native();
+
 const DATA_FILE_CLASS: &str = "com/lancedb/lance/fragment/DataFile";
 const DATA_FILE_CONSTRUCTOR_SIG: &str = "(Ljava/lang/String;[I[III)V";
 const DELETE_FILE_CLASS: &str = "com/lancedb/lance/fragment/DeletionFile";
