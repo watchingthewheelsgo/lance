@@ -607,4 +607,10 @@ public class Dataset implements Closeable {
   }
 
   private native FragmentMetadata getFragmentNative(int fragmentId);
+
+  public int getMaxFieldId() {
+    return getMaxFieldIdNative();
+  }
+
+  private native int getMaxFieldIdNative();
 }

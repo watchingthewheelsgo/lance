@@ -24,8 +24,9 @@ use jni::{
 };
 use lance::table::format::{DataFile, DeletionFile, DeletionFileType, Fragment, RowIdMeta};
 use std::iter::once;
+use std::sync::Arc;
 
-use lance::dataset::fragment::FileFragment;
+use lance::dataset::fragment::{self, FileFragment};
 use lance_datafusion::utils::StreamingWriteSource;
 
 use crate::error::{Error, Result};
@@ -222,6 +223,42 @@ fn create_fragment<'a>(
     export_vec(env, &fragments)
 }
 
+#[no_mangle]
+pub extern "system" fn Java_com_lancedb_lance_Fragment_mergeNative(
+    mut env: JNIEnv,
+    _jfragment: JObject, // Fragment
+    jdataset: JObject,
+    jleft_on: JString,
+    jright_on: JString,
+    jmax_field_id: jint,
+) -> jint {
+    return ok_or_throw!(
+        env,
+        inner_merge_native(&mut env, _jfragment, jdataset, jleft_on, jright_on, jmax_field_id)
+    )
+}
+
+pub fn inner_merge_native<'local>(
+    env: &mut JNIEnv,
+    _jfragment: JObject, // Fragment
+    jdataset: JObject, // ReaderLike
+    jleft_on: JString,
+    jright_on: JString,
+    jmax_field_id: jint,
+) -> Result<JObject<'local>> {
+    let mut fragment: FileFragment = _jfragment.extract_object(env)?;
+    // let dataset = jdataset.extract_object(env)?;
+    let left_on = jleft_on.extract(env)?;
+    let right_on = jright_on.extract(env)?;
+    
+    let (fragment, schema) = RT.block_on(async move {
+        fragment
+        .merge_columns(dataset, left_on.as_str(), right_on.as_str(), jmax_field_id as i32)
+        .await
+    })?;
+    Ok(JObject::null())
+}
+
 const DATA_FILE_CLASS: &str = "com/lancedb/lance/fragment/DataFile";
 const DATA_FILE_CONSTRUCTOR_SIG: &str = "(Ljava/lang/String;[I[III)V";
 const DELETE_FILE_CLASS: &str = "com/lancedb/lance/fragment/DeletionFile";
@@ -341,6 +378,17 @@ impl FromJObjectWithEnv<RowIdMeta> for JObject<'_> {
         let s: String = env.get_string(&JString::from(metadata))?.into();
         let meta: RowIdMeta = serde_json::from_str(&s)?;
         Ok(meta)
+    }
+}
+
+
+impl FromJObjectWithEnv<FileFragment> for JObject<'_> {
+    fn extract_object(&self, env: &mut JNIEnv<'_>) -> Result<FileFragment> {
+        let fragment_obj = env.call_method(self, "getFragment", "()Lcom/lancedb/lance/FragmentMetadata;", &[])?.l()?;
+        let fragment: Fragment = fragment_obj.extract_object(env)?;
+        let dataset_obj = env.call_method(self, "getDataset", "()Lcom/lancedb/lance/Dataset;", &[])?.l()?;
+        let dataset: BlockingDataset = dataset_obj.extract_object(env)?;
+        Ok(FileFragment::new(Arc::new(dataset.inner), fragment))
     }
 }
 

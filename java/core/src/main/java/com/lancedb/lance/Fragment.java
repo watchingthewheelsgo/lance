@@ -23,6 +23,8 @@ import org.apache.arrow.c.Data;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.Preconditions;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Arrays;
 import java.util.List;
@@ -106,6 +108,16 @@ public class Fragment {
     return countRowsNative(dataset, fragment.getId());
   }
 
+  public Pair<FragmentMetadata, Schema> merge(Dataset dataset, String leftOn, String rightOn) {
+    if (rightOn == null) {
+      rightOn = leftOn;
+    }
+    int maxFieldId = this.dataset.getMaxFieldId();
+    return this.mergeNative(dataset, leftOn, rightOn, maxFieldId);
+  }
+
+  public native Pair<FragmentMetadata, Schema> mergeNative(Dataset dataset, String leftOn, String rightOn, long maxFieldId);
+  
   /**
    * Create a fragment from the given data.
    *

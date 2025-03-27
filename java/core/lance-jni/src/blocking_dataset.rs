@@ -320,6 +320,15 @@ fn create_dataset<'local>(
     dataset.into_java(env)
 }
 
+impl FromJObjectWithEnv<BlockingDataset> for JObject<'_> {
+    fn extract_object(&self, env: &mut JNIEnv<'_>) -> Result<BlockingDataset> {
+        let dataset_obj = env.call_method(self, "getDataset", "()Lcom/lancedb/lance/Dataset;", &[])?.l()?;
+        let dataset_guard =
+            unsafe { env.get_rust_field::<_, _, BlockingDataset>(dataset_obj, NATIVE_DATASET) }?;
+        Ok(dataset_guard.clone())
+    }
+}
+
 impl IntoJava for BlockingDataset {
     fn into_java<'a>(self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>> {
         attach_native_dataset(env, self)
